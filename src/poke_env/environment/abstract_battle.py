@@ -496,7 +496,9 @@ class AbstractBattle(ABC):
                 temp_pokemon._start_effect("MINIMIZE")
 
             if override_move:
-                self.get_pokemon(pokemon)._moved(override_move, failed=failed, use=False)
+                self.get_pokemon(pokemon)._moved(
+                    override_move, failed=failed, use=False
+                )
             if override_move is None or reveal_other_move:
                 self.get_pokemon(pokemon)._moved(
                     move, failed=failed, use=not reveal_other_move
