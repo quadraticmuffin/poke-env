@@ -360,8 +360,10 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         battle = copy.copy(self.current_battle)
         battle.logger = None  # pyre-ignore
         self.last_battle = copy.deepcopy(battle)
+        # server_time_start = time.time()
         self._actions.put(action)
         observation = self._observations.get()
+        # print(f'server_time: {time.time() - server_time_start}')
         reward = self.calc_reward(self.last_battle, self.current_battle)  # pyre-ignore
         terminated = False
         truncated = False
