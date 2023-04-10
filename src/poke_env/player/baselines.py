@@ -163,7 +163,8 @@ class SimpleHeuristicsPlayer(Player):
 
             move = max(
                 battle.available_moves,
-                key=lambda m: m.base_power
+                key=lambda m: 0 if m.id == 'curse' else
+                m.base_power
                 * (1.5 if m.type in active.types else 1)
                 * (
                     physical_ratio
