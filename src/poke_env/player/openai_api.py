@@ -68,6 +68,7 @@ class _AsyncPlayer(Player):
         self._actions = _AsyncQueue(self._create_class(asyncio.Queue, 1))
         self.current_battle: Optional[AbstractBattle] = None
         self._user_funcs: OpenAIGymEnv = user_funcs
+        self.timer_start = 0
 
     def choose_move(
         self, battle: AbstractBattle
@@ -79,9 +80,13 @@ class _AsyncPlayer(Player):
             self.current_battle = battle
         if not self.current_battle == battle:  # pragma: no cover
             raise RuntimeError("Using different battles for queues")
+        print(f'server time: {time.time() - self.timer_start}')
+        self.timer_start = time.time()
         battle_to_send = self._user_funcs.embed_battle(battle)
         await self._observations.async_put(battle_to_send)
         action = await self._actions.async_get()
+        print(f'client time: {time.time() - self.timer_start}')
+        self.timer_start = time.time()
         if action == -1:
             return ForfeitBattleOrder()
         return self._user_funcs.action_to_move(action, battle)
@@ -328,6 +333,7 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
                     "Environment and agent aren't synchronized. Try to restart"
                 )
         while self.current_battle == self.agent.current_battle:
+            # print([mon.species for mon in self.current_battle.all_active_pokemons], '\n', [mon.species for mon in self.agent.current_battle.all_active_pokemons])
             time.sleep(0.01)
         self.current_battle = self.agent.current_battle
         battle = copy.copy(self.current_battle)
