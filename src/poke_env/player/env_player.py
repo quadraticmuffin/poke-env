@@ -38,6 +38,7 @@ class EnvPlayer(OpenAIGymEnv, ABC):
         team: Optional[Union[str, Teambuilder]] = None,
         start_challenging: bool = True,
         use_old_gym_api: bool = True,  # False when new API is implemented in most ML libs
+        client_server_timer: bool = False,
     ):
         """
         :param opponent: Opponent to challenge.
@@ -109,6 +110,7 @@ class EnvPlayer(OpenAIGymEnv, ABC):
             ping_timeout=ping_timeout,
             start_challenging=start_challenging,
             use_old_gym_api=use_old_gym_api,
+            client_server_timer=client_server_timer,
         )
 
     def reward_computing_helper(

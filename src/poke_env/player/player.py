@@ -67,6 +67,7 @@ class Player(PlayerNetwork, ABC):
         ping_interval: Optional[float] = 20.0,
         ping_timeout: Optional[float] = 20.0,
         team: Optional[Union[str, Teambuilder]] = None,
+        client_server_timer: bool = False,
     ) -> None:
         """
         :param player_configuration: Player configuration. If empty, defaults to an
@@ -139,6 +140,8 @@ class Player(PlayerNetwork, ABC):
         )
         self._battle_end_condition: Condition = self._create_class(Condition)
         self._challenge_queue: Queue = self._create_class(Queue)
+
+        self.client_server_timer = client_server_timer
 
         if isinstance(team, Teambuilder):
             self._team = team
