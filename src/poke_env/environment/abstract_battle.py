@@ -520,9 +520,15 @@ class AbstractBattle(ABC):
             weather = split_message[2]
             if weather == "none":
                 self._weather = {}
+            elif len(split_message) < 4:
+                self._weather = {Weather.from_showdown_message(weather): self.turn}
+            elif split_message[3].split(' ')[0] == '[from]':
+                self._weather = {Weather.from_showdown_message(weather): -1}
+            elif split_message[3] == '[upkeep]':
                 return
             else:
-                self._weather = {Weather.from_showdown_message(weather): self.turn}
+                raise NotImplementedError
+                
         elif split_message[1] == "faint":
             pokemon = split_message[2]
             self.get_pokemon(pokemon)._faint()
