@@ -241,9 +241,6 @@ class Pokemon:
         else:
             self._protect_counter = 0
 
-        if self._status == Status.SLP:
-            self._status_counter += 1
-
         if len(self._moves) > 4:
             new_moves = {}
 
@@ -412,6 +409,12 @@ class Pokemon:
             self._update_from_pokedex(species)
 
     def _update_from_request(self, request_pokemon: Dict[str, Any]) -> None:
+        if self._active and (not request_pokemon["active"]):
+            self._switch_out()
+        
+        if (not self._active) and request_pokemon["active"]:
+            self._switch_in()
+
         self._active = request_pokemon["active"]
 
         if request_pokemon == self._last_request:

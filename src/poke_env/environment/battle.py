@@ -122,15 +122,26 @@ class Battle(AbstractBattle):
 
     def _switch(self, pokemon, details, hp_status):
         identifier = pokemon.split(":")[0][:2]
-
+        pokemon = self.get_pokemon(pokemon, details=details)
+        
+        already_switched = (
+            identifier == self._player_role and 
+            self.active_pokemon and
+            (self.active_pokemon == pokemon)
+        ) or (
+            identifier != self._player_role and 
+            self.opponent_active_pokemon and
+            (self.opponent_active_pokemon == pokemon)
+        ) 
+        if already_switched:
+            return
+        
         if identifier == self._player_role:
             if self.active_pokemon:
                 self.active_pokemon._switch_out()
         else:
             if self.opponent_active_pokemon:
                 self.opponent_active_pokemon._switch_out()
-
-        pokemon = self.get_pokemon(pokemon, details=details)
 
         pokemon._switch_in(details=details)
         pokemon._set_hp_status(hp_status)
