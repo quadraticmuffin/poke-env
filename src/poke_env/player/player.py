@@ -164,7 +164,7 @@ class Player(PlayerNetwork, ABC):
         :rtype: AbstractBattle
         """
         # We check that the battle has the correct format
-        if split_message[1] == self._format and len(split_message) >= 2:
+        if split_message[1] == self.base_format and len(split_message) >= 2:
             # Battle initialisation
             battle_tag = "-".join(split_message)[1:]
 
@@ -725,6 +725,10 @@ class Player(PlayerNetwork, ABC):
     @property
     def format(self) -> str:
         return self._format
+
+    @property
+    def base_format(self) -> str:
+        return self._format.split('@')[0]
 
     @property
     def format_is_doubles(self) -> bool:
