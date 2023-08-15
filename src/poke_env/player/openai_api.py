@@ -373,7 +373,7 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         server_time_start = time.time()
         self._actions.put(action)
         observation = self._observations.get()
-        print(f'server_time: {time.time() - server_time_start}')
+        print(f'{self.agent.username} server_time: {time.time() - server_time_start}')
         reward = self.calc_reward(self.last_battle, self.current_battle)  # pyre-ignore
         terminated = False
         truncated = False
