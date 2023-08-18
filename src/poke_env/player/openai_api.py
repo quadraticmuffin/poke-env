@@ -214,8 +214,6 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         self._old_step_api: bool = use_old_gym_api
         self._challenge_task = None
         if start_challenging:
-            print(self.username, 'waiting 3 seconds for login...')
-            time.sleep(3)
             self._keep_challenging = True
             self._challenge_task = asyncio.run_coroutine_threadsafe(
                 self._challenge_loop(), POKE_LOOP
@@ -484,6 +482,8 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         n_challenges: Optional[int] = None,
         callback: Optional[Callable[[AbstractBattle], None]] = None,
     ):  # pragma: no cover
+        print(self.username, 'waiting 3 seconds for login...')
+        time.sleep(10)
         if not n_challenges:
             while self._keep_challenging:
                 opponent = self._get_opponent()
