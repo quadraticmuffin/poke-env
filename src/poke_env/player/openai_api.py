@@ -482,8 +482,8 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         n_challenges: Optional[int] = None,
         callback: Optional[Callable[[AbstractBattle], None]] = None,
     ):  # pragma: no cover
-        print(self.username, 'waiting 3 seconds for login...')
-        time.sleep(10)
+        print(self.username, 'waiting 5 seconds for login...')
+        time.sleep(5)
         if not n_challenges:
             while self._keep_challenging:
                 opponent = self._get_opponent()
