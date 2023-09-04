@@ -10,8 +10,8 @@ import time
 from abc import ABC, abstractmethod
 from logging import Logger
 from typing import Union, Awaitable, Optional, Tuple, TypeVar, Callable, Dict, List
-from gym.core import Env  # pyre-ignore
-from gym.spaces import Space, Discrete  # pyre-ignore
+from gymnasium.core import Env  # pyre-ignore
+from gymnasium.spaces import Space, Discrete  # pyre-ignore
 
 from poke_env.environment.abstract_battle import AbstractBattle
 from poke_env.player.internals import POKE_LOOP
