@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from abc import ABC
 from abc import abstractmethod
 from abc import abstractproperty
@@ -11,20 +10,16 @@ from typing import Set
 from typing import Tuple
 from typing import Union
 
-from poke_env.data import _REPLAY_TEMPLATE
+from poke_env.data import _REPLAY_TEMPLATE, GenData, to_id_str
 from poke_env.environment.field import Field
-from poke_env.environment.pokemon import Pokemon, GEN_TO_POKEMON
+from poke_env.environment.pokemon import Pokemon
 from poke_env.environment.side_condition import STACKABLE_CONDITIONS, SideCondition
 from poke_env.environment.weather import Weather
-from poke_env.utils import to_id_str
 
 import os
 
 
 class AbstractBattle(ABC):
-
-    POKEMON_CLASS = GEN_TO_POKEMON[8]
-
     MESSAGES_TO_IGNORE = {
         "-anim",
         "-burst",
@@ -81,6 +76,7 @@ class AbstractBattle(ABC):
         "_battle_tag",
         "_can_dynamax",
         "_can_mega_evolve",
+        "_can_terastallize",
         "_can_z_move",
         "_dynamax_turn",
         "_fields",
@@ -93,6 +89,7 @@ class AbstractBattle(ABC):
         "_move_on_next_request",
         "_opponent_can_dynamax",
         "_opponent_can_mega_evolve",
+        "_opponent_can_terastallize",
         "_opponent_can_z_move",
         "_opponent_dynamax_turn",
         "_opponent_rating",
@@ -105,6 +102,7 @@ class AbstractBattle(ABC):
         "_rating",
         "_rqid",
         "_rules",
+        "_reviving",
         "_side_conditions",
         "_team_size",
         "_team",
@@ -124,7 +122,11 @@ class AbstractBattle(ABC):
         username: str,
         logger: Logger,
         save_replays: Union[str, bool],
+        gen: int,
     ):
+        # Load data
+        self._data = GenData.from_gen(gen)
+
         # Utils attributes
         self._battle_tag: str = battle_tag
         self._format: Optional[str] = None
@@ -153,6 +155,7 @@ class AbstractBattle(ABC):
         self._rqid = 0
         self._rules = []
         self._turn: int = 0
+        self._opponent_can_terrastallize: bool = True
         self._opponent_dynamax_turn: Optional[int] = None
         self._opponent_rating: Optional[int] = None
         self._rating: Optional[int] = None
@@ -161,8 +164,9 @@ class AbstractBattle(ABC):
         # In game battle state attributes
         self._weather: Dict[Weather, int] = {}
         self._fields: Dict[Field, int] = {}  # set()
-        self._side_conditions: Dict[SideCondition, int] = {}  # set()
         self._opponent_side_conditions: Dict[SideCondition, int] = {}  # set()
+        self._side_conditions: Dict[SideCondition, int] = {}  # set()
+        self._reviving: bool = False
 
         # Pokemon attributes
         self._team: Dict[str, Pokemon] = {}
@@ -220,12 +224,12 @@ class AbstractBattle(ABC):
             )
 
         if request:
-            team[identifier] = self.POKEMON_CLASS(request_pokemon=request)
+            team[identifier] = Pokemon(request_pokemon=request, gen=self._data.gen)
         elif details:
-            team[identifier] = self.POKEMON_CLASS(details=details)
+            team[identifier] = Pokemon(details=details, gen=self._data.gen)
         else:
             species = identifier[4:]
-            team[identifier] = self.POKEMON_CLASS(species=species)
+            team[identifier] = Pokemon(species=species, gen=self._data.gen)
 
         return team[identifier]
 
@@ -400,13 +404,13 @@ class AbstractBattle(ABC):
             if split_message[-1] == "[notarget]":
                 split_message = split_message[:-1]
 
+            if split_message[-1].startswith("[spread]"):
+                split_message = split_message[:-1]
+
             if split_message[-1] in {"[from]lockedmove", "[from]Pursuit", "[zeffect]"}:
                 split_message = split_message[:-1]
 
             if split_message[-1].startswith("[anim]"):
-                split_message = split_message[:-1]
-
-            if split_message[-1] == "null":
                 split_message = split_message[:-1]
 
             if split_message[-1].startswith("[from]move: "):
@@ -415,7 +419,7 @@ class AbstractBattle(ABC):
                 if override_move == "Sleep Talk":
                     # Sleep talk was used, but also reveals another move
                     reveal_other_move = True
-                elif override_move == "Copycat":
+                elif override_move in {"Copycat", "Metronome", "Nature Power"}:
                     pass
                 else:
                     self.logger.warning(
@@ -426,6 +430,9 @@ class AbstractBattle(ABC):
                         self.battle_tag,
                         self.turn,
                     )
+
+            if split_message[-1] == "null":
+                split_message = split_message[:-1]
 
             if split_message[-1].startswith("[from]ability: "):
                 revealed_ability = split_message.pop()[15:]
@@ -447,9 +454,6 @@ class AbstractBattle(ABC):
                     )
             if split_message[-1] == "[from]Magic Coat":
                 return
-
-            if split_message[-1].startswith("[spread]"):
-                split_message = split_message[:-1]
 
             while split_message[-1] == "[still]":
                 split_message = split_message[:-1]
@@ -496,13 +500,14 @@ class AbstractBattle(ABC):
                 temp_pokemon._start_effect("MINIMIZE")
 
             if override_move:
+                # Moves that can trigger this branch results in two `move` messages being sent.
+                # We're setting use=False in the one (with the override) in order to prevent two pps from being used
+                # incorrectly.
                 self.get_pokemon(pokemon)._moved(
                     override_move, failed=failed, use=False
                 )
             if override_move is None or reveal_other_move:
-                self.get_pokemon(pokemon)._moved(
-                    move, failed=failed, use=not reveal_other_move
-                )
+                self.get_pokemon(pokemon)._moved(move, failed=failed, use=False)
         elif split_message[1] == "cant":
             pokemon, _ = split_message[2:4]
             self.get_pokemon(pokemon)._cant_move()
@@ -664,6 +669,8 @@ class AbstractBattle(ABC):
             self.get_pokemon(pokemon)._used_z_move()
         elif split_message[1] == "clearpoke":
             self._in_team_preview = True
+            for mon in self.team.values():
+                mon._clear_active()
         elif split_message[1] == "gen":
             self._format = split_message[2]
         elif split_message[1] == "inactive":
@@ -740,6 +747,14 @@ class AbstractBattle(ABC):
         elif split_message[1] == "title":
             player_1, player_2 = split_message[2].split(" vs. ")
             self.players = player_1, player_2
+        elif split_message[1] == "-terastallize":
+            pokemon, type_ = split_message[2:]
+            pokemon = self.get_pokemon(pokemon)
+            pokemon._terastallize(type_)
+
+            if pokemon.terastallized:
+                if pokemon in set(self.opponent_team.values()):
+                    self._opponent_can_terrastallize = False
         else:
             raise NotImplementedError(split_message)
 
@@ -749,7 +764,7 @@ class AbstractBattle(ABC):
 
     def _register_teampreview_pokemon(self, player: str, details: str):
         if player != self._player_role:
-            mon = self.POKEMON_CLASS(details=details)
+            mon = Pokemon(details=details, gen=self._data.gen)
             self._teampreview_opponent_team.add(mon)
 
     def _side_end(self, side, condition):
@@ -1141,3 +1156,7 @@ class AbstractBattle(ABC):
     @move_on_next_request.setter
     def move_on_next_request(self, value) -> None:
         self._move_on_next_request = value
+
+    @property
+    def reviving(self) -> bool:
+        return self._reviving

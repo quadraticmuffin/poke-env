@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """This module defines the Teambuilder abstract class, which represents objects yielding
 Pokemon Showdown teams in the context of communicating with Pokemon Showdown.
 """
@@ -42,6 +41,9 @@ class Teambuilder(ABC):
         mons = []
 
         for line in team.split("\n"):
+            while line and line.startswith(" "):
+                line = line[1:]
+
             if line == "":
                 if not current_mon_has_been_added:
                     mons.append(current_mon)
@@ -86,6 +88,9 @@ class Teambuilder(ABC):
             elif line.startswith("Hidden Power: "):
                 hp_type = line.replace("Hidden Power: ", "").strip()
                 current_mon.hiddenpowertype = hp_type
+            elif line.startswith("Tera Type: "):
+                tera_type = line.replace("Tera Type: ", "").strip()
+                current_mon.tera_type = tera_type
             else:
                 current_mon = TeambuilderPokemon()
                 current_mon_has_been_added = False

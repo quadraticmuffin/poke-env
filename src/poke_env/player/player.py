@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """This module defines a base class for players.
 """
 
@@ -38,7 +37,7 @@ from poke_env.server_configuration import LocalhostServerConfiguration
 from poke_env.server_configuration import ServerConfiguration
 from poke_env.teambuilder.teambuilder import Teambuilder
 from poke_env.teambuilder.constant_teambuilder import ConstantTeambuilder
-from poke_env.utils import to_id_str
+from poke_env.data import GenData, to_id_str
 
 
 class Player(PlayerNetwork, ABC):
@@ -46,7 +45,7 @@ class Player(PlayerNetwork, ABC):
     Base class for players.
     """
 
-    MESSAGES_TO_IGNORE = {"", "t:", "expire"}
+    MESSAGES_TO_IGNORE = {"", "t:", "expire", "uhtmlchange"}
 
     # When an error resulting from an invalid choice is made, the next order has this
     # chance of being showdown's default order to prevent infinite loops
@@ -57,7 +56,7 @@ class Player(PlayerNetwork, ABC):
         player_configuration: Optional[PlayerConfiguration] = None,
         *,
         avatar: Optional[int] = None,
-        battle_format: str = "gen8randombattle",
+        battle_format: str = "gen9randombattle",
         log_level: Optional[int] = None,
         max_concurrent_battles: int = 1,
         save_replays: Union[bool, str] = False,
@@ -155,6 +154,21 @@ class Player(PlayerNetwork, ABC):
     def _battle_finished_callback(self, battle: AbstractBattle) -> None:
         pass
 
+    def update_team(self, team) -> None:
+        """Updates the team used by the player.
+
+        :param team: The new team to use.
+        :type team: str or Teambuilder
+        """
+        if isinstance(team, Teambuilder):
+            self._team = team
+        elif isinstance(team, str):
+            self._team = ConstantTeambuilder(team)
+        else:
+            raise TypeError(
+                "Team must be a showdown team string or a Teambuilder object."
+            )
+
     async def _create_battle(self, split_message: List[str]) -> AbstractBattle:
         """Returns battle object corresponding to received message.
 
@@ -171,21 +185,24 @@ class Player(PlayerNetwork, ABC):
             if battle_tag in self._battles:
                 return self._battles[battle_tag]
             else:
+                gen = GenData.from_format(self._format).gen
                 if self.format_is_doubles:
                     battle = DoubleBattle(
                         battle_tag=battle_tag,
                         username=self.username,
                         logger=self.logger,
                         save_replays=self._save_replays,
+                        gen=gen,
                     )
                 else:
-                    battle = Battle.from_format(
-                        format_=self._format,
+                    battle = Battle(
                         battle_tag=battle_tag,
                         username=self.username,
                         logger=self.logger,
                         save_replays=self._save_replays,
+                        gen=gen,
                     )
+
                 await self._battle_count_queue.put(None)
                 if battle_tag in self._battles:
                     self._battle_count_queue.get()
@@ -199,8 +216,6 @@ class Player(PlayerNetwork, ABC):
                     await self._send_message("/timer on", battle.battle_tag)
 
                 return battle
-
-            return self._battles[battle_tag]
         else:
             self.logger.critical(
                 "Unmanaged battle initialisation message received: %s", split_message
@@ -306,9 +321,17 @@ class Player(PlayerNetwork, ABC):
                     "[Unavailable choice]"
                 ) and split_message[2].endswith("is disabled"):
                     battle.move_on_next_request = True
+                elif split_message[2].startswith("[Invalid choice]") and split_message[
+                    2
+                ].endswith("is disabled"):
+                    battle.move_on_next_request = True
                 elif split_message[2].startswith(
                     "[Invalid choice] Can't move: You sent more choices than unfainted"
                     " Pokémon."
+                ):
+                    await self._handle_battle_request(battle, maybe_default_order=True)
+                elif split_message[2].startswith(
+                    "[Invalid choice] Can't move: You can only Terastallize once per battle."
                 ):
                     await self._handle_battle_request(battle, maybe_default_order=True)
                 else:
@@ -443,7 +466,16 @@ class Player(PlayerNetwork, ABC):
 
         for (
             idx,
-            (orders, mon, switches, moves, can_mega, can_z_move, can_dynamax),
+            (
+                orders,
+                mon,
+                switches,
+                moves,
+                can_mega,
+                can_z_move,
+                can_dynamax,
+                can_tera,
+            ),
         ) in enumerate(
             zip(
                 active_orders,
@@ -453,6 +485,7 @@ class Player(PlayerNetwork, ABC):
                 battle.can_mega_evolve,
                 battle.can_z_move,
                 battle.can_dynamax,
+                battle.can_tera,
             )
         ):
             if mon:
@@ -497,6 +530,15 @@ class Player(PlayerNetwork, ABC):
                         ]
                     )
 
+                if can_tera:
+                    orders.extend(
+                        [
+                            BattleOrder(move, move_target=target, terastallize=True)
+                            for move in moves
+                            for target in targets[move]
+                        ]
+                    )
+
                 if sum(battle.force_switch) == 1:
                     if orders:
                         return orders[int(random.random() * len(orders))]
@@ -523,6 +565,14 @@ class Player(PlayerNetwork, ABC):
         if battle.can_dynamax:
             available_orders.extend(
                 [BattleOrder(move, dynamax=True) for move in battle.available_moves]
+            )
+
+        if battle.can_terastallize:
+            available_orders.extend(
+                [
+                    BattleOrder(move, terastallize=True)
+                    for move in battle.available_moves
+                ]
             )
 
         if battle.can_z_move and battle.active_pokemon:
@@ -697,6 +747,7 @@ class Player(PlayerNetwork, ABC):
         mega: bool = False,
         z_move: bool = False,
         dynamax: bool = False,
+        terastallize: bool = False,
         move_target: int = DoubleBattle.EMPTY_TARGET_POSITION,
     ) -> BattleOrder:
         """Formats an move order corresponding to the provided pokemon or move.
@@ -709,13 +760,20 @@ class Player(PlayerNetwork, ABC):
         :type z_move: bool
         :param dynamax: Whether to dynamax, if a move is chosen.
         :type dynamax: bool
+        :param terastallize: Whether to terastallize, if a move is chosen.
+        :type terastallize: bool
         :param move_target: Target Pokemon slot of a given move
         :type move_target: int
         :return: Formatted move order
         :rtype: str
         """
         return BattleOrder(
-            order, mega=mega, move_target=move_target, z_move=z_move, dynamax=dynamax
+            order,
+            mega=mega,
+            move_target=move_target,
+            z_move=z_move,
+            dynamax=dynamax,
+            terastallize=terastallize,
         )
 
     @property

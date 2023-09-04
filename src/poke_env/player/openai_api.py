@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
 """This module defines a player class with the OpenAI API on the main thread.
 For a black-box implementation consider using the module env_player.
 """
+# pyre-ignore-all-errors[34]
 import asyncio
 import copy
 import numpy as np  # pyre-ignore
@@ -115,6 +115,9 @@ class _OpenAIGymEnvMetaclass(_EnvMetaclass, _ABCMetaclass):
 
 
 class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
+    """
+    Base class implementing the OpenAI Gym API on the main thread.
+    """
 
     _INIT_RETRIES = 100
     _TIME_BETWEEN_RETRIES = 0.5
@@ -138,7 +141,6 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         ping_timeout: Optional[float] = 20.0,
         team: Optional[Union[str, Teambuilder]] = None,
         start_challenging: bool = False,
-        use_old_gym_api: bool = True,  # False when new API is implemented in most ML libs
         client_server_timer: bool = False,
     ):
         """
@@ -182,10 +184,6 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         :param start_challenging: Whether to automatically start the challenge loop or
             leave it inactive.
         :type start_challenging: bool
-        :param use_old_gym_api: Whether to use old gym api (where step returns
-            (observation, reward, done, info)) or the new one (where step returns
-            (observation, reward, terminated, truncated, info))
-        :type use_old_gym_api: bool
         """
         self.agent = _AsyncPlayer(
             self,
@@ -211,8 +209,8 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         self.current_battle: Optional[AbstractBattle] = None
         self.last_battle: Optional[AbstractBattle] = None
         self._keep_challenging: bool = False
-        self._old_step_api: bool = use_old_gym_api
         self._challenge_task = None
+        self._seed_initialized: bool = False
         if start_challenging:
             self._keep_challenging = True
             self._challenge_task = asyncio.run_coroutine_threadsafe(
@@ -231,6 +229,7 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         :type last_battle: AbstractBattle
         :param current_battle: The current battle state.
         :type current_battle: AbstractBattle
+
         :return: The reward for current_battle.
         :rtype: float
         """
@@ -247,6 +246,7 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         :type action: int
         :param battle: The current battle state
         :type battle: AbstractBattle
+
         :return: The battle order for the given action in context of the current battle.
         :rtype: BattleOrder
         """
@@ -255,13 +255,14 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
     @abstractmethod
     def embed_battle(
         self, battle: AbstractBattle
-    ) -> ObservationType:  # pyre-ignore  # pragma: no cover
+    ) -> ObservationType:  # pragma: no cover
         """
         Returns the embedding of the current battle state in a format compatible with
         the OpenAI gym API.
 
         :param battle: The current battle state.
         :type battle: AbstractBattle
+
         :return: The embedding of the current battle state.
         """
         pass
@@ -318,9 +319,13 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         seed: Optional[int] = None,
         return_info: bool = False,
         options: Optional[dict] = None,
-    ) -> Union[ObservationType, Tuple[ObservationType, dict]]:  # pyre-ignore
-        if seed:
-            self.seed(seed)
+    ) -> Union[ObservationType, Tuple[ObservationType, dict]]:  # pragma: no cover
+        if seed is not None:
+            super().reset(seed=seed)  # pyre-ignore
+            self._seed_initialized = True
+        elif not self._seed_initialized:
+            super().reset(seed=int(time.time()))
+            self._seed_initialized = True
         if not self.agent.current_battle:
             count = self._INIT_RETRIES
             while not self.agent.current_battle:
@@ -343,9 +348,7 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         battle = copy.copy(self.current_battle)
         battle.logger = None  # pyre-ignore
         self.last_battle = copy.deepcopy(battle)
-        if return_info:
-            return self._observations.get(), self.get_additional_info()
-        return self._observations.get()
+        return self._observations.get(), self.get_additional_info()
 
     def get_additional_info(self) -> dict:
         """
@@ -359,12 +362,13 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
 
     def step(
         self, action: ActionType
-    ) -> Union[  # pyre-ignore
+    ) -> Union[
         Tuple[ObservationType, float, bool, bool, dict],
         Tuple[ObservationType, float, bool, dict],
     ]:  # pragma: no cover
         if not self.current_battle:
-            return self.reset(), 0.0, False, {}  # pyre-ignore
+            obs, info = self.reset(return_info=True)
+            return obs, 0.0, False, False, info
         if self.current_battle.finished:
             raise RuntimeError("Battle is already finished, call reset")
         battle = copy.copy(self.current_battle)
@@ -397,10 +401,7 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
                 terminated = True
             else:
                 truncated = True
-        if self._old_step_api:
-            return observation, reward, terminated or truncated, {}
-        else:
-            return observation, reward, terminated, truncated, {}
+        return observation, reward, terminated, truncated, self.get_additional_info()
 
     def render(self, mode="human"):
         print(
@@ -637,10 +638,13 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         :param timeout: The amount of time to wait for if the task is not already done.
             If empty it will wait until the task is done.
         :type timeout: int, optional
+
         :return: True if the task is done or if the task gets completed after the
             timeout.
         :rtype: bool
         """
+        if self._challenge_task is None:
+            return True
         if timeout is None:
             self._challenge_task.result()
             return True
@@ -722,3 +726,89 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         :rtype: str
         """
         return self.agent.websocket_url
+
+    def __getattr__(self, item):  # pragma: no cover
+        return getattr(self.agent, item)
+
+
+class LegacyOpenAIGymEnv(OpenAIGymEnv, ABC):
+    """
+    Subclass of OpenAIGymEnv compatible with the old gym API.
+    If you need compatibility with the old gym API you should use the
+    `wrap_for_old_gym_api` function.
+    """
+
+    def reset(
+        self,
+        *,
+        seed: Optional[int] = None,
+        return_info: bool = False,
+        options: Optional[dict] = None,
+    ) -> Union[ObservationType, Tuple[ObservationType, dict]]:  # pragma: no cover
+        obs, info = OpenAIGymEnv.reset(
+            self, seed=seed, return_info=True, options=options
+        )
+        if return_info:
+            return obs, info
+        return obs
+
+    def step(
+        self, action: ActionType
+    ) -> Tuple[ObservationType, float, bool, dict]:  # pragma: no cover
+        obs, reward, terminated, truncated, info = OpenAIGymEnv.step(self, action)
+        return obs, reward, terminated or truncated, info
+
+
+class _OpenAIGymEnvWrapper(LegacyOpenAIGymEnv):
+    def __init__(self, environment: OpenAIGymEnv):  # noqa
+        self._wrapped: OpenAIGymEnv = environment
+        self.step = LegacyOpenAIGymEnv.step.__get__(  # noqa # pyre-ignore
+            self._wrapped, self._wrapped.__class__
+        )
+        self.reset = LegacyOpenAIGymEnv.reset.__get__(  # noqa # pyre-ignore
+            self._wrapped, self._wrapped.__class__
+        )
+        self._instantiated = True
+
+    def calc_reward(
+        self, last_battle: AbstractBattle, current_battle: AbstractBattle
+    ) -> float:
+        return self._wrapped.calc_reward(last_battle, current_battle)
+
+    def action_to_move(self, action: int, battle: AbstractBattle) -> BattleOrder:
+        return self._wrapped.action_to_move(action, battle)
+
+    def embed_battle(self, battle: AbstractBattle) -> ObservationType:
+        return self._wrapped.embed_battle(battle)
+
+    def describe_embedding(self) -> Space:
+        return self._wrapped.describe_embedding()
+
+    def action_space_size(self) -> int:
+        return self._wrapped.action_space_size()
+
+    def get_opponent(self) -> Union[Player, str, List[Player], List[str]]:
+        return self._wrapped.get_opponent()
+
+    def __getattr__(self, item):
+        if item == "_instantiated":
+            return False
+        return getattr(self._wrapped, item)
+
+    def __setattr__(self, key, value):
+        if not self._instantiated:
+            return super().__setattr__(key, value)
+        return setattr(self._wrapped, key, value)
+
+
+def wrap_for_old_gym_api(env: OpenAIGymEnv) -> LegacyOpenAIGymEnv:
+    """
+    Wraps an OpenAIGymEnv in order to support the old gym API.
+
+    :param env: the environment to wrap.
+    :type env: OpenAIGymEnv
+
+    :return: The wrapped environment
+    :rtype: OpenAIGymEnv
+    """
+    return _OpenAIGymEnvWrapper(env)  # pyre-ignore

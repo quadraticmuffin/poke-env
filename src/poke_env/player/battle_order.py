@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from dataclasses import dataclass
 from typing import Optional, Union
 from poke_env.environment.double_battle import DoubleBattle
@@ -12,6 +11,7 @@ class BattleOrder:
     mega: bool = False
     z_move: bool = False
     dynamax: bool = False
+    terastallize: bool = False
     move_target: int = DoubleBattle.EMPTY_TARGET_POSITION
 
     DEFAULT_ORDER = "/choose default"
@@ -32,6 +32,8 @@ class BattleOrder:
                 message += " zmove"
             elif self.dynamax:
                 message += " dynamax"
+            elif self.terastallize:
+                message += " terastallize"
 
             if self.move_target != DoubleBattle.EMPTY_TARGET_POSITION:
                 message += f" {self.move_target}"
@@ -84,6 +86,7 @@ class DoubleBattleOrder(BattleOrder):
                 if not first_order.mega or not second_order.mega
                 if not first_order.z_move or not second_order.z_move
                 if not first_order.dynamax or not second_order.dynamax
+                if not first_order.terastallize or not second_order.terastallize
                 if first_order.order != second_order.order
             ]
             if orders:

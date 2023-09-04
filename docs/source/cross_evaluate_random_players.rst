@@ -10,7 +10,7 @@ The corresponding complete source code can be found `here <https://github.com/hs
 
 The goal of this example is to demonstrate how to run existing agents locally, and how to easily measure the relative performance of multiple agents with the ``cross_evaluate`` utility function.
 
-.. note:: This example uses ``tabulate`` ti format results. You can install it by running ``pip install tabulate``.
+.. note:: This example uses ``tabulate`` to format results. You can install it by running ``pip install tabulate``.
 
 Getting *something* to run
 **************************
@@ -21,8 +21,7 @@ Let's start by defining a ``main`` and some boilerplate code to run it with ``as
 
 .. code-block:: python
 
-    # -*- coding: utf-8 -*-
-    import asyncio
+        import asyncio
 
     async def main():
         pass

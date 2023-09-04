@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # From https://github.com/navdeep-G/setup.py
 
 # Note: To use the 'upload' functionality of this file, you must:
@@ -19,7 +18,7 @@ URL = "https://github.com/hsahovic/poke-env"
 EMAIL = "contact@sahovic.fr"
 AUTHOR = "Haris Sahovic"
 REQUIRES_PYTHON = ">=3.7.0"
-VERSION = "0.5.0"
+VERSION = "0.7.1"
 
 # What packages are required for this module to be executed?
 with open("requirements.txt") as requirements:

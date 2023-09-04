@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """This module defines the Weather class, which represents a in-battle weather.
 """
 # pyre-ignore-all-errors[45]
@@ -17,6 +16,7 @@ class Weather(Enum):
     PRIMORDIALSEA = auto()
     RAINDANCE = auto()
     SANDSTORM = auto()
+    SNOW = auto()
     SUNNYDAY = auto()
 
     def __str__(self) -> str:
