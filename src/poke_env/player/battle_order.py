@@ -105,3 +105,11 @@ class ForfeitBattleOrder(BattleOrder):
     @property
     def message(self) -> str:
         return "/forfeit"
+
+class TieBattleOrder(BattleOrder):
+    def __init__(self, *args, **kwargs):
+        pass
+
+    @property
+    def message(self) -> str:
+        return "/offertie"

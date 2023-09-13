@@ -13,6 +13,7 @@ from poke_env.player.battle_order import (
     DefaultBattleOrder,
     DoubleBattleOrder,
     ForfeitBattleOrder,
+    TieBattleOrder
 )
 from poke_env.player.utils import (
     cross_evaluate,
@@ -52,6 +53,7 @@ __all__ = [
     "wrap_for_old_gym_api",
     "EnvPlayer",
     "ForfeitBattleOrder",
+    "TieBattleOrder",
     "Gen4EnvSinglePlayer",
     "Gen5EnvSinglePlayer",
     "Gen6EnvSinglePlayer",
