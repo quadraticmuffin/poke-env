@@ -507,7 +507,7 @@ class AbstractBattle(ABC):
                     override_move, failed=failed, use=False
                 )
             if override_move is None or reveal_other_move:
-                self.get_pokemon(pokemon)._moved(move, failed=failed)
+                self.get_pokemon(pokemon)._moved(move, failed=failed, use=not reveal_other_move)
         elif split_message[1] == "cant":
             pokemon, _ = split_message[2:4]
             self.get_pokemon(pokemon)._cant_move()
