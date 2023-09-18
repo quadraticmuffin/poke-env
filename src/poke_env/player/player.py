@@ -256,9 +256,9 @@ class Player(PlayerNetwork, ABC):
                 if split_message[2]:
                     request = orjson.loads(split_message[2])
                     battle._parse_request(request)
-                    if battle.move_on_next_request:
-                        await self._handle_battle_request(battle)
-                        battle.move_on_next_request = False
+                    # if battle.move_on_next_request:
+                    #     await self._handle_battle_request(battle)
+                    #     battle.move_on_next_request = False
             elif split_message[1] == "win" or split_message[1] == "tie":
                 if split_message[1] == "win":
                     battle._won_by(split_message[2])
@@ -342,10 +342,21 @@ class Player(PlayerNetwork, ABC):
             elif split_message[1] == "teampreview":
                 battle._parse_message(split_message)
                 await self._handle_battle_request(battle, from_teampreview_request=True)
+            elif split_message[1] == "upkeep":
+                if battle.move_on_next_request:
+                    await self._handle_battle_request(battle)
+                    battle.move_on_next_request = False
             elif split_message[1] == "bigerror":
                 self.logger.warning("Received 'bigerror' message: %s", split_message)
             else:
                 battle._parse_message(split_message)
+        if battle.move_on_next_request and split_messages[1][1] != "request":
+            # used uturn or batonpass,
+            # upkeep didn't catch the need for request
+            # but also don't want to move on the "request" message
+            # instead want to wait until the next set of messages
+            await self._handle_battle_request(battle)
+            battle.move_on_next_request = False
 
     async def _handle_battle_request(
         self,
