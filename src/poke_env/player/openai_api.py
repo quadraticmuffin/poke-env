@@ -80,15 +80,9 @@ class _AsyncPlayer(Player):
             self.current_battle = battle
         if not self.current_battle == battle:  # pragma: no cover
             raise RuntimeError("Using different battles for queues")
-        if self.client_server_timer:
-            print(f'server time: {time.time() - self.timer_start}')
-            self.timer_start = time.time()
         battle_to_send = self._user_funcs.embed_battle(battle)
         await self._observations.async_put(battle_to_send)
         action = await self._actions.async_get()
-        if self.client_server_timer:
-            print(f'client time: {time.time() - self.timer_start}')
-            self.timer_start = time.time()
         if action == -1:
             return ForfeitBattleOrder()
         return self._user_funcs.action_to_move(action, battle)
@@ -141,7 +135,6 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
         ping_timeout: Optional[float] = 20.0,
         team: Optional[Union[str, Teambuilder]] = None,
         start_challenging: bool = False,
-        client_server_timer: bool = False,
     ):
         """
         :param player_configuration: Player configuration. If empty, defaults to an
@@ -200,7 +193,6 @@ class OpenAIGymEnv(Env, ABC, metaclass=_OpenAIGymEnvMetaclass):  # pyre-ignore
             ping_interval=ping_interval,
             ping_timeout=ping_timeout,
             team=team,
-            client_server_timer=client_server_timer,
         )
         self._actions = self.agent._actions
         self._observations = self.agent._observations

@@ -36,7 +36,6 @@ class EnvPlayer(OpenAIGymEnv, ABC):
         ping_timeout: Optional[float] = 20.0,
         team: Optional[Union[str, Teambuilder]] = None,
         start_challenging: bool = True,
-        client_server_timer: bool = False,
     ):
         """
         :param opponent: Opponent to challenge.
@@ -103,7 +102,6 @@ class EnvPlayer(OpenAIGymEnv, ABC):
             ping_interval=ping_interval,
             ping_timeout=ping_timeout,
             start_challenging=start_challenging,
-            client_server_timer=client_server_timer,
         )
 
     def reward_computing_helper(
