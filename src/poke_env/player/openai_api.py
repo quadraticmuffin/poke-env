@@ -68,7 +68,6 @@ class _AsyncPlayer(Player):
         self._actions = _AsyncQueue(self._create_class(asyncio.Queue, 1))
         self.current_battle: Optional[AbstractBattle] = None
         self._user_funcs: OpenAIGymEnv = user_funcs
-        self.timer_start = 0
 
     def choose_move(
         self, battle: AbstractBattle
