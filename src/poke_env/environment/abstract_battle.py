@@ -679,6 +679,8 @@ class AbstractBattle(ABC):
             elif "reconnected" in split_message[2]:
                 self._anybody_inactive = False
                 self._reconnected = True
+        elif split_message[1] == "inactiveoff":
+            pass
         elif split_message[1] == "player":
             if len(split_message) == 6:
                 player, username, avatar, rating = split_message[2:6]
