@@ -16,6 +16,7 @@ from poke_env.data import GenData, to_id_str
 
 class Pokemon:
     __slots__ = (
+        "_orig_ability",
         "_ability",
         "_active",
         "_active",
@@ -27,6 +28,7 @@ class Pokemon:
         "_first_turn",
         "_gender",
         "_heightm",
+        "_orig_item",
         "_item",
         "_last_details",
         "_last_request",
@@ -71,6 +73,7 @@ class Pokemon:
         self._weightkg: int
 
         # Individual related attributes
+        self._orig_ability: Optional[str] = None
         self._ability: Optional[str] = None
         self._active: bool
         self._gender: Optional[PokemonGender] = None
@@ -96,6 +99,7 @@ class Pokemon:
         self._first_turn: bool = False
         self._terastallized: bool = False
         self._terastallized_type: Optional[PokemonType] = None
+        self._orig_item: Optional[str] = None
         self._item: Optional[str] = self._data.UNKNOWN_ITEM
         self._last_request: dict = {}
         self._last_details: str = ""
@@ -437,6 +441,8 @@ class Pokemon:
         if request_pokemon == self._last_request:
             return
 
+        if "baseAbility" in request_pokemon:
+            self._orig_ability = request_pokemon["baseAbility"]
         if "ability" in request_pokemon:
             self.ability = request_pokemon["ability"]
         elif "baseAbility" in request_pokemon:
@@ -553,6 +559,8 @@ class Pokemon:
         if ability is None:
             self._ability = None
         else:
+            if self._orig_ability is None:
+                self._orig_ability = to_id_str(ability)
             self._ability = to_id_str(ability)
 
     @property
@@ -679,6 +687,12 @@ class Pokemon:
     @item.setter
     def item(self, item: str):
         self._item = item
+        if item:
+            if self._orig_item is None and item != GenData.UNKNOWN_ITEM:
+                self._orig_item = item
+        else:
+            if self._orig_item is None:
+                self._orig_item = 'no_item'
 
     @property
     def level(self) -> int:
