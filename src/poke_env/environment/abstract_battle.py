@@ -395,6 +395,7 @@ class AbstractBattle(ABC):
             failed = False
             override_move = None
             reveal_other_move = False
+            locked_move = False
 
             for move_failed_suffix in ["[miss]", "[still]", "[notarget]"]:
                 if split_message[-1] == move_failed_suffix:
@@ -407,7 +408,10 @@ class AbstractBattle(ABC):
             if split_message[-1].startswith("[spread]"):
                 split_message = split_message[:-1]
 
-            if split_message[-1] in {"[from]lockedmove", "[from]Pursuit", "[zeffect]"}:
+            if split_message[-1] == "[from]lockedmove":
+                locked_move = True 
+
+            if split_message[-1] in {"[from]Pursuit", "[zeffect]"}:
                 split_message = split_message[:-1]
 
             if split_message[-1].startswith("[anim]"):
@@ -507,7 +511,7 @@ class AbstractBattle(ABC):
                     override_move, failed=failed, use=False
                 )
             if override_move is None or reveal_other_move:
-                self.get_pokemon(pokemon)._moved(move, failed=failed, use=not reveal_other_move)
+                self.get_pokemon(pokemon)._moved(move, failed=failed, use=not reveal_other_move and not locked_move)
         elif split_message[1] == "cant":
             pokemon, _ = split_message[2:4]
             self.get_pokemon(pokemon)._cant_move()
