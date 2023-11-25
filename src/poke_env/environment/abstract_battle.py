@@ -410,6 +410,7 @@ class AbstractBattle(ABC):
 
             if split_message[-1] == "[from]lockedmove":
                 locked_move = True 
+                split_message = split_message[:-1]
 
             if split_message[-1] in {"[from]Pursuit", "[zeffect]"}:
                 split_message = split_message[:-1]
