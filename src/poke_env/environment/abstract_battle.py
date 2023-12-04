@@ -549,7 +549,7 @@ class AbstractBattle(ABC):
             pokemon, ability = split_message[2:4]
             pkmn = self.get_pokemon(pokemon)
             if len(split_message) > 4 and split_message[4].startswith('[from] ability: '):
-                pkmn._orig_ability = to_id_str(split_message[4].split(' ')[2])
+                pkmn._base_ability = to_id_str(split_message[4].split(' ')[2])
             pkmn.ability = ability
         elif split_message[1] == "-start":
             pokemon, effect = split_message[2:4]

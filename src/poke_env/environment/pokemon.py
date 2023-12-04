@@ -16,7 +16,7 @@ from poke_env.data import GenData, to_id_str
 
 class Pokemon:
     __slots__ = (
-        "_orig_ability",
+        "_base_ability",
         "_ability",
         "_active",
         "_active",
@@ -73,7 +73,7 @@ class Pokemon:
         self._weightkg: int
 
         # Individual related attributes
-        self._orig_ability: Optional[str] = None
+        self._base_ability: Optional[str] = None
         self._ability: Optional[str] = None
         self._active: bool
         self._gender: Optional[PokemonGender] = None
@@ -442,7 +442,7 @@ class Pokemon:
             return
 
         if "baseAbility" in request_pokemon:
-            self._orig_ability = request_pokemon["baseAbility"]
+            self._base_ability = request_pokemon["baseAbility"]
         if "ability" in request_pokemon:
             self.ability = request_pokemon["ability"]
         elif "baseAbility" in request_pokemon:
@@ -559,8 +559,8 @@ class Pokemon:
         if ability is None:
             self._ability = None
         else:
-            if self._orig_ability is None:
-                self._orig_ability = to_id_str(ability)
+            if self._base_ability is None:
+                self._base_ability = to_id_str(ability)
             self._ability = to_id_str(ability)
 
     @property
