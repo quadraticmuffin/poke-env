@@ -81,6 +81,8 @@ class Battle(AbstractBattle):
         )
         self._trapped = False
         self._force_switch = request.get("forceSwitch", False)
+        if isinstance(self._force_switch, list):
+            self._force_switch = self._force_switch[0]
 
         if self._force_switch:
             self._move_on_next_request = True
