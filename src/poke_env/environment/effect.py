@@ -262,7 +262,7 @@ class Effect(Enum):
             has been activated.
         :rtype: bool
         """
-        return self in _TURN_COUNTER_EFFECTS
+        return self in _ACTION_COUNTER_EFFECTS
 
 
 _PROTECT_BREAKING_EFFECTS: Set[Effect] = {
