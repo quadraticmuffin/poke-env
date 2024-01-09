@@ -182,7 +182,7 @@ class SimpleHeuristicsPlayer(Player):
                 move, dynamax=self._should_dynamax(battle, n_remaining_mons)
             )
 
-        if battle.available_switches:
+        if battle.available_switches and not battle.maybe_trapped:
             return self.create_order(
                 max(
                     battle.available_switches,
