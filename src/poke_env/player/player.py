@@ -561,9 +561,10 @@ class Player(PlayerNetwork, ABC):
 
     def choose_random_singles_move(self, battle: Battle) -> BattleOrder:
         available_orders = [BattleOrder(move) for move in battle.available_moves]
-        available_orders.extend(
-            [BattleOrder(switch) for switch in battle.available_switches]
-        )
+        if not battle.maybe_trapped:
+            available_orders.extend(
+                [BattleOrder(switch) for switch in battle.available_switches]
+            )
 
         if battle.can_mega_evolve:
             available_orders.extend(
