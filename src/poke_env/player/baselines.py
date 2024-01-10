@@ -181,8 +181,7 @@ class SimpleHeuristicsPlayer(Player):
             return self.create_order(
                 move, dynamax=self._should_dynamax(battle, n_remaining_mons)
             )
-
-        if battle.available_switches and not battle.maybe_trapped:
+        if battle.available_switches and battle.opponent_active_pokemon.ability not in ('arenatrap', 'shadowtag'):
             return self.create_order(
                 max(
                     battle.available_switches,
