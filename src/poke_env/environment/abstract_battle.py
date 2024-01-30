@@ -62,6 +62,7 @@ class AbstractBattle(ABC):
         "n",
         "rated",
         "resisted",
+        "sentchoice",
         "split",
         "supereffective",
         "teampreview",
