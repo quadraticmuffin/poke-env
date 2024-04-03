@@ -58,6 +58,7 @@ class Move:
         "_is_empty",
         "_moves_dict",
         "_request_target",
+        "_revealed",
     )
 
     def __init__(self, move_id: str, gen: int, raw_id: Optional[str] = None):
@@ -65,6 +66,7 @@ class Move:
         self._base_power_override = None
         self._gen = gen
         self._moves_dict = GenData.from_gen(gen).moves
+        self._revealed = False
 
         if move_id.startswith("hiddenpower") and raw_id is not None:
             base_power = "".join([c for c in raw_id if c.isdigit()])
@@ -88,6 +90,9 @@ class Move:
 
     def use(self) -> None:
         self._current_pp -= 1
+
+    def reveal(self) -> None:
+        self._revealed = True
 
     @staticmethod
     def is_id_z(id_, gen: int) -> bool:
