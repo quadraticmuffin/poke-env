@@ -395,4 +395,6 @@ class PlayerNetwork(ABC):
         :return: The websocket url.
         :rtype: str
         """
+        if self._server_url == "sim3.psim.us":
+            return "wss://sim3.psim.us/showdown/websocket"
         return f"ws://{self._server_url}/showdown/websocket"
